@@ -1,11 +1,13 @@
 import re
 from urllib.parse import urlparse
+import utils
+import urllib
 
-def scraper(url, resp):
+def scraper(url: str, resp: utils.response.Response) -> list:
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
-def extract_next_links(url, resp):
+def extract_next_links(url: str, resp: utils.response.Response):
     # Implementation required.
     # url: the URL that was used to get the page
     # resp.url: the actual url of the page
@@ -15,8 +17,25 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    return list()
+    try:
+        with urllib.request.urlopen(resp.url) as webpage:
+            content = webpage.read().decode('utf-8')
+            all_words = content.split()
+            
+            ics_list = re.findall(r"*.ics.uci.edu/*", all_words)
+            cs_list = re.findall(r"*.cs.uci.edu/*", all_words)
+            inf_list = re.findall(r"*.informatics.uci.edu/*", all_words)
+            stat_list = re.findall(r"*.stat.uci.edu/*", all_words)
 
+            merged = ics_list + cs_list + inf_list + stat_list
+            return merged  
+
+    except urllib.error.URLError as e:
+        print(f"Error opening URL: {e}")
+    except urllib.error.HTTPError as e:
+        print(f"Error opening URL: {e}")
+
+   
 def is_valid(url):
     # Decide whether to crawl this url or not. 
     # If you decide to crawl it, return True; otherwise return False.
