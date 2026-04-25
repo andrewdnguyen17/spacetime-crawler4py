@@ -1,7 +1,15 @@
 import re
 from urllib.parse import urlparse
 import utils
+from bs4 import BeautifulSoup
 import urllib
+
+# account for traps such as ml libraries and crawlers
+# dotn include stop words when counting words
+# look into beautiful soup?
+# can ignore errors: 601, 602
+# important errors: 603, 604, 605
+
 
 def scraper(url: str, resp: utils.response.Response) -> list:
     links = extract_next_links(url, resp)
@@ -17,24 +25,8 @@ def extract_next_links(url: str, resp: utils.response.Response):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    try:
-        with urllib.request.urlopen(resp.url) as webpage:
-            content = webpage.read().decode('utf-8')
-            all_words = content.split()
-            
-            ics_list = re.findall(r"*.ics.uci.edu/*", all_words)
-            cs_list = re.findall(r"*.cs.uci.edu/*", all_words)
-            inf_list = re.findall(r"*.informatics.uci.edu/*", all_words)
-            stat_list = re.findall(r"*.stat.uci.edu/*", all_words)
-
-            merged = ics_list + cs_list + inf_list + stat_list
-            return merged  
-
-    except urllib.error.URLError as e:
-        print(f"Error opening URL: {e}")
-    except urllib.error.HTTPError as e:
-        print(f"Error opening URL: {e}")
-
+    
+    pass
    
 def is_valid(url):
     # Decide whether to crawl this url or not. 
@@ -44,6 +36,28 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
+        
+        host = parsed.netloc.lower()
+        allowed = (
+            host.endswith(".ics.uci.edu") or host == "ics.uci.edu" or
+            host.endswith(".cs.uci.edu") or host == "cs.uci.edu" or
+            host.endswith(".informatics.uci.edu") or host == "informatics.uci.edu" or
+            host.endswith(".stat.uci.edu") or host == "stat.uci.edu"
+        )
+
+        not_allowed = (
+            # machine learning databases
+            re.search(r"/ml", parsed.path.lower()) or
+            host.endswith(".archive.ics.uci.edu") or host == "archive.ics.uci.edu" or
+            host.endswith(".kdd.ics.uci.edu") or host == "kdd.ics.uci.edu" or
+
+            # calendar/event search
+            re.search(r"/events/(week|month|day|today)", parsed.path.lower())
+        )
+
+        if not allowed or not_allowed :
+            return False
+        
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
