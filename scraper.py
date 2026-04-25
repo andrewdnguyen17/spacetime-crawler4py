@@ -1,5 +1,6 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urldefrag
+from collections import defaultdict
 import utils
 from bs4 import BeautifulSoup
 import urllib
@@ -9,6 +10,22 @@ import urllib
 # look into beautiful soup?
 # can ignore errors: 601, 602
 # important errors: 603, 604, 605
+
+unique_pages = set()
+longest_page = {"url": "", "count": 0}
+word_frequencies = defaultdict(int)
+subdomain_pages = defaultdict(set)
+
+def print_report():
+    print(f"Unique pages: {len(unique_pages)}")
+    print(f"Longest page: {longest_page['url']} - {longest_page['count']} words")
+    print("Top 50 words:")
+    sorted_words = sorted(word.frequencies.items(), key=lambda x: -x[1])
+    for word, count in sorted_words[:50]:
+        print(f"{word}: {count}")
+    print("Subdomains in uci.edu (alphabetical)")
+    for subdomain in sorted(subdomain_pages.keys()):
+        print(f"{subdomain}, {len(subdomain_pages[subdomain])}")
 
 
 def scraper(url: str, resp: utils.response.Response) -> list:
@@ -26,8 +43,21 @@ def extract_next_links(url: str, resp: utils.response.Response):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     
-    pass
-   
+    if resp.status != 200 or resp.raw_response is None:
+        return []
+    
+    content = resp.raw_response.content
+    soup = BeautifulSoup(content, "lxml")
+    hyperlinks = []
+    for link in soup.find_all('a'):
+        hyperlinks.append(link.get('href'))
+    
+    defragged_url = urldefrag(url)[0]
+    unique_pages.add(defragged_url)
+    
+    return hyperlinks
+
+
 def is_valid(url):
     # Decide whether to crawl this url or not. 
     # If you decide to crawl it, return True; otherwise return False.
