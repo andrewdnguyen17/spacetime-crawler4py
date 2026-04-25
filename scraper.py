@@ -1,9 +1,8 @@
 import re
-from urllib.parse import urlparse, urldefrag
+from urllib.parse import urlparse, urldefrag, urljoin
 from collections import defaultdict
 import utils
 from bs4 import BeautifulSoup
-import urllib
 
 # account for traps such as ml libraries and crawlers
 # dotn include stop words when counting words
@@ -20,7 +19,7 @@ def print_report():
     print(f"Unique pages: {len(unique_pages)}")
     print(f"Longest page: {longest_page['url']} - {longest_page['count']} words")
     print("Top 50 words:")
-    sorted_words = sorted(word.frequencies.items(), key=lambda x: -x[1])
+    sorted_words = sorted(word_frequencies.items(), key=lambda x: -x[1])
     for word, count in sorted_words[:50]:
         print(f"{word}: {count}")
     print("Subdomains in uci.edu (alphabetical)")
@@ -28,11 +27,11 @@ def print_report():
         print(f"{subdomain}, {len(subdomain_pages[subdomain])}")
 
 
-def scraper(url: str, resp: utils.response.Response) -> list:
+def scraper(url, resp) -> list:
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
-def extract_next_links(url: str, resp: utils.response.Response):
+def extract_next_links(url, resp):
     # Implementation required.
     # url: the URL that was used to get the page
     # resp.url: the actual url of the page
@@ -47,13 +46,20 @@ def extract_next_links(url: str, resp: utils.response.Response):
         return []
     
     content = resp.raw_response.content
+    if len(content) > 5_000_000: 
+        return []
+
     soup = BeautifulSoup(content, "lxml")
-    hyperlinks = []
-    for link in soup.find_all('a'):
-        hyperlinks.append(link.get('href'))
-    
+
     defragged_url = urldefrag(url)[0]
     unique_pages.add(defragged_url)
+
+    hyperlinks = []
+    # code from: https://www.tutorialspoint.com/article/how-can-beautifulsoup-be-used-to-extract-href-links-from-a-website
+    for link in soup.find_all('a'):
+        absolute = urljoin(resp.raw_response.url, link.get('href'))
+        defragged = urldefrag(absolute)[0]
+        hyperlinks.append(defragged)
     
     return hyperlinks
 
