@@ -15,6 +15,52 @@ longest_page = {"url": "", "count": 0}
 word_frequencies = defaultdict(int)
 subdomain_pages = defaultdict(set)
 
+STOP_WORDS = {
+    "a", "about", "above", "after", "again", "against", "all", "am", "an",
+    "and", "any", "are", "aren't", "as", "at", "be", "because", "been",
+    "before", "being", "below", "between", "both", "but", "by", "can't",
+    "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't",
+    "doing", "don't", "down", "during", "each", "few", "for", "from",
+    "further", "get", "got", "had", "hadn't", "has", "hasn't", "have",
+    "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here",
+    "here's", "hers", "herself", "him", "himself", "his", "how", "how's",
+    "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't",
+    "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't",
+    "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only",
+    "or", "other", "ought", "our", "ours", "ourselves", "out", "over",
+    "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should",
+    "shouldn't", "so", "some", "such", "than", "that", "that's", "the",
+    "their", "theirs", "them", "themselves", "then", "there", "there's",
+    "these", "they", "they'd", "they'll", "they're", "they've", "this",
+    "those", "through", "to", "too", "under", "until", "up", "very", "was",
+    "wasn't", "we", "we'd", "we'll", "we're", "we've", "were", "weren't",
+    "what", "what's", "when", "when's", "where", "where's", "which",
+    "while", "who", "who's", "whom", "why", "why's", "will", "with",
+    "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're",
+    "you've", "your", "yours", "yourself", "yourselves"
+}
+
+def parse_page_content(soup): #TO DO: MAKE SURE DEALS WITH BAD INPUTS
+    
+    text_content = soup.get_text().lower()
+    no_stop_words = [word for word in text_content.split() if word not in STOP_WORDS]
+    
+    word_count = len(no_stop_words)
+    if word_count > longest_page["count"]:
+        word_frequencies = defaultdict(int)
+        for word in no_stop_words:
+            word_frequencies[word] += 1
+
+    
+    
+# call in extract_next_links, pass in url in string
+def get_subdomain(url: str):
+    hostname = urlparse(url).hostname
+    parts = hostname.split('.')
+    subdomain = ".".join(parts[:-2])
+    subdomain_pages.append(subdomain)
+
+
 def print_report():
     print(f"Unique pages: {len(unique_pages)}")
     print(f"Longest page: {longest_page['url']} - {longest_page['count']} words")
@@ -49,7 +95,11 @@ def extract_next_links(url, resp):
     if len(content) > 5_000_000: 
         return []
 
-    soup = BeautifulSoup(content, "lxml")
+    
+    try: 
+        soup = BeautifulSoup(content, "lxml")
+    except:
+        soup = BeautifulSoup(content, "html.parser")
 
     defragged_url = urldefrag(url)[0]
     unique_pages.add(defragged_url)
@@ -88,7 +138,8 @@ def is_valid(url):
             host.endswith(".kdd.ics.uci.edu") or host == "kdd.ics.uci.edu" or
 
             # calendar/event search
-            re.search(r"/events/(week|month|day|today)", parsed.path.lower())
+            re.search(r"/events/(week|month|day|today)", parsed.path.lower()) or
+            re.search(r"/\d{4}/\d{2}(/\d{2})?/?$", parsed.path)
         )
 
         if not allowed or not_allowed :
@@ -107,3 +158,4 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+
