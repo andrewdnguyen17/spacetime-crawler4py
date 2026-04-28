@@ -147,7 +147,10 @@ def is_valid(url):
 
             # calendar/event search
             re.search(r"/events/(week|month|day|today)", parsed.path.lower()) or
-            re.search(r"/\d{4}/\d{2}/\d{2}", parsed.path) or
+            re.search(r"/events/", parsed.path.lower()) or
+            re.search(r"\d{4}/\d{2}/\d{2}", parsed.path) or
+            re.search(r"\d{4}-\d{2}-\d{2}", parsed.query.lower()) or
+            re.search(r"\d{4}-\d{2}-\d{2}", parsed.path.lower()) or
 
             re.search(r"doku\.php", parsed.path.lower()) or
             re.search(r"(^|&)(idx|do)=", parsed.query.lower()) or
