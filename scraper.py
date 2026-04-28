@@ -78,7 +78,6 @@ def print_report():
 
 def scraper(url, resp) -> list:
     links = extract_next_links(url, resp)
-    
     return [link for link in links if is_valid(link)]
 
 def extract_next_links(url, resp):
@@ -148,7 +147,11 @@ def is_valid(url):
 
             # calendar/event search
             re.search(r"/events/(week|month|day|today)", parsed.path.lower()) or
-            re.search(r"/\d{4}/\d{2}(/\d{2})?/?$", parsed.path)
+            re.search(r"/\d{4}/\d{2}", parsed.path) or
+
+            re.search(r"doku\.php", parsed.path.lower()) or
+            re.search(r"[?&](idx|do)=", parsed.query.lower()) or
+            re.search(r"[?&](subPage|page)=", parsed.query.lower())
         )
 
         if not allowed or not_allowed :
