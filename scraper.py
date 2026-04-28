@@ -60,9 +60,8 @@ def parse_page_content(soup, url): # NOTE: Fixed to handle only real, visible te
 # call in extract_next_links, pass in url in string
 def get_subdomain(url: str):
     hostname = urlparse(url).hostname
-    parts = hostname.split('.')
-    subdomain = ".".join(parts[:-2])
-    subdomain_pages.append(subdomain)
+    if hostname and hostname.endswith(".uci.edu"):
+        subdomain_pages[hostname].add(url) # hostname is key, url gets added to the set
 
 
 def print_report():
@@ -79,6 +78,7 @@ def print_report():
 
 def scraper(url, resp) -> list:
     links = extract_next_links(url, resp)
+    
     return [link for link in links if is_valid(link)]
 
 def extract_next_links(url, resp):
@@ -110,6 +110,7 @@ def extract_next_links(url, resp):
     defragged_url = urldefrag(url)[0]
     unique_pages.add(defragged_url)
 
+    get_subdomain(defragged_url)
     parse_page_content(soup, defragged_url)
 
     hyperlinks = []
