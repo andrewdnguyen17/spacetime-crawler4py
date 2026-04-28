@@ -40,16 +40,20 @@ STOP_WORDS = {
     "you've", "your", "yours", "yourself", "yourselves"
 }
 
-def parse_page_content(soup): #TO DO: MAKE SURE DEALS WITH BAD INPUTS
+def parse_page_content(soup, url): # NOTE: Fixed to handle only real, visible text
+
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
+
+    text_content = soup.get_text(separator=" ")
+    words = re.findall(r"[a-zA-Z]{2,}", text_content.lower())
     
-    text_content = soup.get_text().lower()
-    no_stop_words = [word for word in text_content.split() if word not in STOP_WORDS]
-    
-    word_count = len(no_stop_words)
-    if word_count > longest_page["count"]:
-        word_frequencies = defaultdict(int)
-        for word in no_stop_words:
-            word_frequencies[word] += 1
+    if len(words) > longest_page["count"]:
+        longest_page["url"] = url
+        longest_page["count"] = len(words)
+        for word in words:
+            if word not in STOP_WORDS:
+                word_frequencies[word] += 1
 
     
     
@@ -88,9 +92,11 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     
+    # Process only successful responses
     if resp.status != 200 or resp.raw_response is None:
         return []
     
+    # Skip large pages
     content = resp.raw_response.content
     if len(content) > 5_000_000: 
         return []
@@ -103,6 +109,8 @@ def extract_next_links(url, resp):
 
     defragged_url = urldefrag(url)[0]
     unique_pages.add(defragged_url)
+
+    parse_page_content(soup, defragged_url)
 
     hyperlinks = []
     # code from: https://www.tutorialspoint.com/article/how-can-beautifulsoup-be-used-to-extract-href-links-from-a-website
