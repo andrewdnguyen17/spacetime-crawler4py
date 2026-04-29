@@ -76,7 +76,14 @@ def get_subdomain(url: str, report):
 
 def read_report():
     with open("crawler_report.json", "r", encoding="utf-8") as file:
-        report = json.load(file)
+        try:
+            report = json.load(file)
+        except json.decoder.JSONDecodeError:
+            report = {"unique_pages": list(),
+                  "longest_page": {"url": "", "count": 0},
+                  "word_frequencies": dict(),
+                  "subdomain_pages": dict()
+                }
     return report
 
 def write_new_report(defragged_url, report, soup):
@@ -135,13 +142,7 @@ def extract_next_links(url, resp):
     defragged_url = urldefrag(url)[0]
     report = read_report()
 
-    #sets up the json if it's empty
-    if not report:
-        report = {"unique_pages": list(),
-                  "longest_page": {"url": "", "count": 0},
-                  "word_frequencies": dict(),
-                  "subdomain_pages": dict()
-                }
+    #sets up the json if it's empty        
 
     if defragged_url in report["unique_pages"]:
         return []
