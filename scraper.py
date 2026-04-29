@@ -1,6 +1,5 @@
 import re
 from urllib.parse import urlparse, urldefrag, urljoin
-from collections import defaultdict
 import utils
 from bs4 import BeautifulSoup
 import json
@@ -71,9 +70,9 @@ def get_subdomain(url: str, report):
     hostname = urlparse(url).hostname
     if hostname and hostname.endswith(".uci.edu"):
         if hostname in report["subdomain_pages"].keys():
-            report["subdomain_pages"][hostname].add(url) # hostname is key, url gets added to the set
+            report["subdomain_pages"][hostname] = list(set(report["subdomain_pages"][hostname]).add(url)) # hostname is key, url gets added to the set
         else:
-            report["subdomain_pages"][hostname] = {url}
+            report["subdomain_pages"][hostname] = [url]
 
 def read_report():
     with open("crawler_report.json", "r", encoding="utf-8") as file:
@@ -82,11 +81,11 @@ def read_report():
 
 def write_new_report(defragged_url, report, soup):
     #updates report with information from the new url
-    report["unique_pages"].add(defragged_url)
+    report["unique_pages"].append(defragged_url)
     get_subdomain(defragged_url, report)
     parse_page_content(soup, defragged_url, report)
 
-    #every 100 pages, sort word_frequency
+    #every 100 pages, sort word_frequencies
     if len(report["unique_pages"]) % 100 == 0:
         report["word_frequencies"] = dict(sorted(report["word_frequencies"].items(), key=lambda x: -x[1]))
 
@@ -124,28 +123,28 @@ def extract_next_links(url, resp):
     
     # Process only successful responses
 
-    hyperlinks = []
+    
     if resp.status != 200 or resp.raw_response is None:
-        return hyperlinks
+        return []
     
     # Skip large pages
     content = resp.raw_response.content
     if len(content) > 5_000_000: 
-        return hyperlinks
+        return []
 
     defragged_url = urldefrag(url)[0]
     report = read_report()
 
     #sets up the json if it's empty
     if not report:
-        report = {"unique_pages": set(),
+        report = {"unique_pages": list(),
                   "longest_page": {"url": "", "count": 0},
-                  "word_frequencies": {},
-                  "subdomain_pages": {}
+                  "word_frequencies": dict(),
+                  "subdomain_pages": dict()
                 }
 
     if defragged_url in report["unique_pages"]:
-        return hyperlinks
+        return []
     
     #rest only executes if we haven't seen the page yet (url not in unique pages)
     
@@ -156,15 +155,15 @@ def extract_next_links(url, resp):
     
     write_new_report(defragged_url, report, soup)
 
-
+    hyperlinks = set()
     
     # code from: https://www.tutorialspoint.com/article/how-can-beautifulsoup-be-used-to-extract-href-links-from-a-website
     for link in soup.find_all('a'):
         absolute = urljoin(resp.raw_response.url, link.get('href'))
         defragged = urldefrag(absolute)[0]
-        hyperlinks.append(defragged)
+        hyperlinks.add(defragged)
     
-    return hyperlinks
+    return list(hyperlinks)
 
 
 def is_valid(url):
