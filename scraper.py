@@ -3,6 +3,7 @@ from urllib.parse import urlparse, urldefrag, urljoin
 from collections import defaultdict
 import utils
 from bs4 import BeautifulSoup
+import json
 
 # account for traps such as ml libraries and crawlers
 # dotn include stop words when counting words
@@ -10,10 +11,17 @@ from bs4 import BeautifulSoup
 # can ignore errors: 601, 602
 # important errors: 603, 604, 605
 
-unique_pages = set()
-longest_page = {"url": "", "count": 0}
-word_frequencies = defaultdict(int)
-subdomain_pages = defaultdict(set)
+
+'''
+REPORT STRUCTURE (json):
+{
+unique_pages: set()
+longest_page: {"url": "", "count": 0}
+word_frequencies: defaultdict(int)
+subdomain_pages: defaultdict(set)
+}
+'''
+
 
 STOP_WORDS = {
     "a", "about", "above", "after", "again", "against", "all", "am", "an",
@@ -40,7 +48,7 @@ STOP_WORDS = {
     "you've", "your", "yours", "yourself", "yourselves"
 }
 
-def parse_page_content(soup, url): # NOTE: Fixed to handle only real, visible text
+def parse_page_content(soup, url, report): # NOTE: Fixed to handle only real, visible text
 
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
@@ -48,32 +56,51 @@ def parse_page_content(soup, url): # NOTE: Fixed to handle only real, visible te
     text_content = soup.get_text(separator=" ")
     words = re.findall(r"[a-zA-Z]{2,}", text_content.lower())
     
-    if len(words) > longest_page["count"]:
-        longest_page["url"] = url
-        longest_page["count"] = len(words)
+    if len(words) > report["longest_page"]["count"]:
+        report["longest_page"]["url"] = url
+        report["longest_page"]["count"] = len(words)
         for word in words:
             if word not in STOP_WORDS:
-                word_frequencies[word] += 1
-
-    
+                if word in report["word_frequency"]:
+                    report["word_frequency"][word] += 1
+                else: 
+                    report["word_frequency"][word] + 1
     
 # call in extract_next_links, pass in url in string
-def get_subdomain(url: str):
+def get_subdomain(url: str, report):
     hostname = urlparse(url).hostname
     if hostname and hostname.endswith(".uci.edu"):
-        subdomain_pages[hostname].add(url) # hostname is key, url gets added to the set
+        if hostname in report["subdomain_pages"].keys():
+            report["subdomain_pages"][hostname].add(url) # hostname is key, url gets added to the set
+        else:
+            report["subdomain_pages"][hostname] = set(url)
+
+def read_report():
+    with open("crawler_report.json", "r", encoding="utf-8") as file:
+        report = json.load(file)
+    return report
+
+def write_new_report(defragged_url, report, soup):
+    #updates report with information from the new url
+    report["unique_pages"].add(defragged_url)
+    get_subdomain(defragged_url, report)
+    parse_page_content(soup, defragged_url, report)
+
+    with open("crawler_report.json", "w", encoding="utf-8") as file:
+        json.dump(report, file, indent=4)
 
 
 def print_report():
-    print(f"Unique pages: {len(unique_pages)}")
-    print(f"Longest page: {longest_page['url']} - {longest_page['count']} words")
+    report = read_report
+    print(f"Unique pages: {len(report["unique_pages"])}")
+    print(f"Longest page: {report["longest_page"]['url']} - {report["longest_page"]['count']} words")
     print("Top 50 words:")
-    sorted_words = sorted(word_frequencies.items(), key=lambda x: -x[1])
+    sorted_words = sorted(report["word_frequencies"].items(), key=lambda x: -x[1])
     for word, count in sorted_words[:50]:
         print(f"{word}: {count}")
     print("Subdomains in uci.edu (alphabetical)")
-    for subdomain in sorted(subdomain_pages.keys()):
-        print(f"{subdomain}, {len(subdomain_pages[subdomain])}")
+    for subdomain in sorted(report["subdomain_pages"].keys()):
+        print(f"{subdomain}, {len(report["subdomain_pages"][subdomain])}")
 
 
 def scraper(url, resp) -> list:
@@ -92,27 +119,42 @@ def extract_next_links(url, resp):
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     
     # Process only successful responses
+
+    hyperlinks = []
     if resp.status != 200 or resp.raw_response is None:
-        return []
+        return hyperlinks
     
     # Skip large pages
     content = resp.raw_response.content
     if len(content) > 5_000_000: 
-        return []
+        return hyperlinks
 
+    defragged_url = urldefrag(url)[0]
+    report = read_report()
+
+    if defragged_url in report["unique_pages"]:
+        return hyperlinks
+    
+    #rest only executes if we haven't seen the page yet (url not in unique pages)
     
     try: 
         soup = BeautifulSoup(content, "lxml")
     except:
         soup = BeautifulSoup(content, "html.parser")
+    
 
-    defragged_url = urldefrag(url)[0]
-    unique_pages.add(defragged_url)
+    #sets up the json if it's empty
+    if not report:
+        report = {"unique_pages": set(),
+                  "longest_page": {"url": "", "count": 0},
+                  "word_frequencies": {},
+                  "subdomain_pages": {}
+                }
 
-    get_subdomain(defragged_url)
-    parse_page_content(soup, defragged_url)
+    write_new_report(defragged_url, report, soup)
 
-    hyperlinks = []
+
+    
     # code from: https://www.tutorialspoint.com/article/how-can-beautifulsoup-be-used-to-extract-href-links-from-a-website
     for link in soup.find_all('a'):
         absolute = urljoin(resp.raw_response.url, link.get('href'))
@@ -147,7 +189,8 @@ def is_valid(url):
 
             # calendar/event search
             re.search(r"/events/(week|month|day|today)", parsed.path.lower()) or
-            re.search(r"/\d{4}/\d{2}/\d{2}", parsed.path) or
+            re.search(r"/\d{4}(/|-)\d{2}(/|-)\d{2}", parsed.path) or
+            re.search(r"/\d{2}(/|-)\d{2}(/|-)\d{4}", parsed.path) or
 
             re.search(r"doku\.php", parsed.path.lower()) or
             re.search(r"(^|&)(idx|do)=", parsed.query.lower()) or
