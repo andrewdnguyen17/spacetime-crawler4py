@@ -70,7 +70,8 @@ def get_subdomain(url: str, report):
     hostname = urlparse(url).hostname
     if hostname and hostname.endswith(".uci.edu"):
         if hostname in report["subdomain_pages"]:
-            updated_subdomain = set(report["subdomain_pages"][hostname]).add(url)
+            updated_subdomain = set(report["subdomain_pages"][hostname])
+            updated_subdomain.add(url)
             report["subdomain_pages"][hostname] = list(updated_subdomain) # hostname is key, url gets added to the set
         else:
             report["subdomain_pages"][hostname] = [url]
