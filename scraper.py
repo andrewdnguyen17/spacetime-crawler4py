@@ -69,7 +69,7 @@ def parse_page_content(soup, url, report): # NOTE: Fixed to handle only real, vi
 def get_subdomain(url: str, report):
     hostname = urlparse(url).hostname
     if hostname and hostname.endswith(".uci.edu"):
-        if hostname in report["subdomain_pages"].keys():
+        if hostname in report["subdomain_pages"]:
             report["subdomain_pages"][hostname] = list(set(report["subdomain_pages"][hostname]).add(url)) # hostname is key, url gets added to the set
         else:
             report["subdomain_pages"][hostname] = [url]
