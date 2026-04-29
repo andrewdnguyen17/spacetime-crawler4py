@@ -59,12 +59,12 @@ def parse_page_content(soup, url, report): # NOTE: Fixed to handle only real, vi
     if len(words) > report["longest_page"]["count"]:
         report["longest_page"]["url"] = url
         report["longest_page"]["count"] = len(words)
-        for word in words:
-            if word not in STOP_WORDS:
-                if word in report["word_frequency"]:
-                    report["word_frequency"][word] += 1
-                else: 
-                    report["word_frequency"][word] = 1
+    for word in words:
+        if word not in STOP_WORDS:
+            if word in report["word_frequencies"]:
+                report["word_frequencies"][word] += 1
+            else: 
+                report["word_frequencies"][word] = 1
     
 # call in extract_next_links, pass in url in string
 def get_subdomain(url: str, report):
@@ -73,7 +73,7 @@ def get_subdomain(url: str, report):
         if hostname in report["subdomain_pages"].keys():
             report["subdomain_pages"][hostname].add(url) # hostname is key, url gets added to the set
         else:
-            report["subdomain_pages"][hostname] = set(url)
+            report["subdomain_pages"][hostname] = {url}
 
 def read_report():
     with open("crawler_report.json", "r", encoding="utf-8") as file:
@@ -95,7 +95,7 @@ def write_new_report(defragged_url, report, soup):
 
 
 def print_report():
-    report = read_report
+    report = read_report()
     print(f"Unique pages: {len(report["unique_pages"])}")
     print(f"Longest page: {report["longest_page"]['url']} - {report["longest_page"]['count']} words")
     print("Top 50 words:")
@@ -136,6 +136,14 @@ def extract_next_links(url, resp):
     defragged_url = urldefrag(url)[0]
     report = read_report()
 
+    #sets up the json if it's empty
+    if not report:
+        report = {"unique_pages": set(),
+                  "longest_page": {"url": "", "count": 0},
+                  "word_frequencies": {},
+                  "subdomain_pages": {}
+                }
+
     if defragged_url in report["unique_pages"]:
         return hyperlinks
     
@@ -146,15 +154,6 @@ def extract_next_links(url, resp):
     except:
         soup = BeautifulSoup(content, "html.parser")
     
-
-    #sets up the json if it's empty
-    if not report:
-        report = {"unique_pages": set(),
-                  "longest_page": {"url": "", "count": 0},
-                  "word_frequencies": {},
-                  "subdomain_pages": {}
-                }
-
     write_new_report(defragged_url, report, soup)
 
 
