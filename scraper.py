@@ -101,6 +101,12 @@ def write_new_report(defragged_url, report, soup):
     with open("crawler_report.json", "w", encoding="utf-8") as file:
         json.dump(report, file, indent=4)
 
+def sort_word_frequencies():
+    report = read_report()
+    report["word_frequencies"] = dict(sorted(report["word_frequencies"].items(), key=lambda x: -x[1]))[:50]
+
+    with open("crawler_report.json", "w", encoding="utf-8") as file:
+        json.dump(report, file, indent=4)
 
 def print_report():
     report = read_report()
