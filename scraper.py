@@ -193,16 +193,22 @@ def is_valid(url):
 
             # calendar/event search
             re.search(r"/events/(week|month|day|today)", parsed.path.lower()) or
-            re.search(r"/\d{4}(/|-)\d{2}(/|-)\d{2}", parsed.path) or
-            re.search(r"/\d{2}(/|-)\d{2}(/|-)\d{4}", parsed.path) or
+            re.search(r"/events/", parsed.path.lower()) or
+            re.search(r"\d{4}/\d{2}/\d{2}", parsed.path) or
+            re.search(r"\d{4}-\d{2}-\d{2}", parsed.query.lower()) or
+            re.search(r"\d{4}-\d{2}-\d{2}", parsed.path.lower()) or
 
             re.search(r"doku\.php", parsed.path.lower()) or
             re.search(r"(^|&)(idx|do)=", parsed.query.lower()) or
             re.search(r"(^|&)(subPage|page)=", parsed.query.lower()) or
             
-            # dechter/ node slide thing
+            # dechter
             re.search(r"/~dechter/", parsed.path.lower()) or
-            re.search(r"/node\d+\.html$", parsed.path.lower())
+            re.search(r"/node\d+\.html$", parsed.path.lower()) or
+            
+            # trap-heavy hosts 
+            host == "grape.ics.uci.edu" or
+            host == "flamingo.ics.uci.edu"
         )
 
         if not allowed or not_allowed :
@@ -214,7 +220,7 @@ def is_valid(url):
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
-            + r"|epub|dll|cnf|tgz|sha1|txt"  # added txt
+            + r"|epub|dll|cnf|tgz|sha1|txt|h|cc|cpp"  # added txt, h, cc, cpp
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
 
