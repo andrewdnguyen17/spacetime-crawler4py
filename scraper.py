@@ -64,7 +64,7 @@ def parse_page_content(soup, url, report): # NOTE: Fixed to handle only real, vi
                 if word in report["word_frequency"]:
                     report["word_frequency"][word] += 1
                 else: 
-                    report["word_frequency"][word] + 1
+                    report["word_frequency"][word] = 1
     
 # call in extract_next_links, pass in url in string
 def get_subdomain(url: str, report):
