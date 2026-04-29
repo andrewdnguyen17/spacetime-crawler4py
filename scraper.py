@@ -86,6 +86,10 @@ def write_new_report(defragged_url, report, soup):
     get_subdomain(defragged_url, report)
     parse_page_content(soup, defragged_url, report)
 
+    #every 100 pages, sort word_frequency
+    if len(report["unique_pages"]) % 100 == 0:
+        report["word_frequencies"] = dict(sorted(report["word_frequencies"].items(), key=lambda x: -x[1]))
+
     with open("crawler_report.json", "w", encoding="utf-8") as file:
         json.dump(report, file, indent=4)
 
