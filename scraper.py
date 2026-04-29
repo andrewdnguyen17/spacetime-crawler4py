@@ -95,15 +95,15 @@ def write_new_report(defragged_url, report, soup):
 
 def print_report():
     report = read_report()
-    print(f"Unique pages: {len(report["unique_pages"])}")
-    print(f"Longest page: {report["longest_page"]['url']} - {report["longest_page"]['count']} words")
+    print(f"Unique pages: {len(report['unique_pages'])}")
+    print(f"Longest page: {report['longest_page']['url']} - {report['longest_page']['count']} words")
     print("Top 50 words:")
-    sorted_words = sorted(report["word_frequencies"].items(), key=lambda x: -x[1])
+    sorted_words = sorted(report['word_frequencies'].items(), key=lambda x: -x[1])
     for word, count in sorted_words[:50]:
         print(f"{word}: {count}")
     print("Subdomains in uci.edu (alphabetical)")
     for subdomain in sorted(report["subdomain_pages"].keys()):
-        print(f"{subdomain}, {len(report["subdomain_pages"][subdomain])}")
+        print(f"{subdomain}, {len(report['subdomain_pages'][subdomain])}")
 
 
 def scraper(url, resp) -> list:
