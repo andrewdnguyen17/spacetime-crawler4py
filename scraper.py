@@ -75,6 +75,7 @@ def get_subdomain(url: str, report):
             report["subdomain_pages"][hostname] = list(updated_subdomain) # hostname is key, url gets added to the set
         else:
             report["subdomain_pages"][hostname] = [url]
+        report['num_subdomain_pages'] += 1
 
 def read_report():
     with open("crawler_report.json", "r", encoding="utf-8") as file:
@@ -85,7 +86,8 @@ def read_report():
                       "num_unique_pages": 0,
                   "longest_page": {"url": "", "count": 0},
                   "word_frequencies": dict(),
-                  "subdomain_pages": dict()
+                  "subdomain_pages": dict(),
+                  "num_subdomain_pages": 0
                 }
     return report
 
@@ -119,8 +121,10 @@ def print_report():
     for word, count in sorted_words[:50]:
         print(f"{word}: {count}")
     print("Subdomains in uci.edu (alphabetical)")
+    print(f"Total number of subdomains: {report['num_subdomain_pages']}")
     for subdomain in sorted(report["subdomain_pages"].keys()):
         print(f"{subdomain}, {len(report['subdomain_pages'][subdomain])}")
+    
 
 
 def scraper(url, resp) -> list:
