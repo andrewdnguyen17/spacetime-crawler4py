@@ -82,6 +82,7 @@ def read_report():
             report = json.load(file)
         except json.decoder.JSONDecodeError:
             report = {"unique_pages": list(),
+                      "num_unique_pages": 0,
                   "longest_page": {"url": "", "count": 0},
                   "word_frequencies": dict(),
                   "subdomain_pages": dict()
@@ -91,6 +92,7 @@ def read_report():
 def write_new_report(defragged_url, report, soup):
     #updates report with information from the new url
     report["unique_pages"].append(defragged_url)
+    report["num_unqiue_pages"] += 1
     get_subdomain(defragged_url, report)
     parse_page_content(soup, defragged_url, report)
 
@@ -103,14 +105,14 @@ def write_new_report(defragged_url, report, soup):
 
 def sort_word_frequencies():
     report = read_report()
-    report["word_frequencies"] = dict(sorted(report["word_frequencies"].items(), key=lambda x: -x[1]))[:50]
+    report["word_frequencies"] = dict(sorted(report["word_frequencies"].items(), key=lambda x: -x[1])[:50])
 
     with open("crawler_report.json", "w", encoding="utf-8") as file:
         json.dump(report, file, indent=4)
 
 def print_report():
     report = read_report()
-    print(f"Unique pages: {len(report['unique_pages'])}")
+    print(f"Unique pages: {report['num_unique_pages']}")
     print(f"Longest page: {report['longest_page']['url']} - {report['longest_page']['count']} words")
     print("Top 50 words:")
     sorted_words = sorted(report['word_frequencies'].items(), key=lambda x: -x[1])
